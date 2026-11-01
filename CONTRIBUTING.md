@@ -4,7 +4,7 @@ Thanks for helping! Bug reports, ideas and pull requests are all welcome.
 
 ## Reporting bugs and requesting features
 
-Use the [issue templates](https://github.com/LiteLDev/LiftOff/issues/new/choose). For bugs, include:
+Use the [issue templates](https://github.com/MiracleForest/LiftOff/issues/new/choose). For bugs, include:
 
 - the LiftOff version;
 - the LeviLamina version;
