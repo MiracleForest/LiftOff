@@ -35,8 +35,8 @@ You need Minecraft Bedrock Edition **1.26.51** for Windows (x64) with LeviLamina
 With [lip](https://github.com/LiteLDev/lip):
 
 ```sh
-lip install github.com/LiteLDev/LiftOff           # dedicated server
-lip install github.com/LiteLDev/LiftOff#client    # client
+lip install github.com/MiracleForest/LiftOff         # dedicated server
+lip install github.com/MiracleForest/LiftOff#client  # client
 ```
 
 Or download the zip from the [latest release](https://github.com/MiracleForest/LiftOff/releases/latest) and extract it next to `LeviLamina/`:
