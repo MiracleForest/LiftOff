@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-01
+
 ### Changed
 
 - The repository moved to [MiracleForest/LiftOff](https://github.com/MiracleForest/LiftOff).
@@ -37,5 +39,6 @@ First release: the behaviour of Carry On 2.11.2 for LeviLamina, on dedicated ser
 - Players without the client mod see the arm pose and a stand-in of the carried block or mob.
 - English and Simplified Chinese.
 
-[Unreleased]: https://github.com/MiracleForest/LiftOff/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/MiracleForest/LiftOff/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/MiracleForest/LiftOff/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/MiracleForest/LiftOff/releases/tag/v0.1.0
