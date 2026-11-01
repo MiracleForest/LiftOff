@@ -10,11 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The repository moved to [MiracleForest/LiftOff](https://github.com/MiracleForest/LiftOff).
-- The lip package is now `github.com/MiracleForest/LiftOff` (`#client` for the client); installing by this path
-  needs lip 0.35.0 or later. To move an existing install, run `lip update` with a lip that supports renamed
-  packages, or `lip uninstall github.com/LiteLDev/LiftOff[#client]` and then
+- The lip package is now `github.com/MiracleForest/LiftOff` (`#client` for the client). `lip update` does not move
+  an existing install to the new path: run `lip uninstall github.com/LiteLDev/LiftOff[#client]` and then
   `lip install github.com/MiracleForest/LiftOff[#client]`; the configuration (`plugins/LiftOff/config/` on a server,
-  `mods/LiftOff/config/` on a client) is kept. Version 0.1.0 stays installable at its old path.
+  `mods/LiftOff/config/` on a client) is kept. Version 0.1.0 is still published under the old path; installing it
+  by the new path needs lip 0.35.0 or later.
 
 ## [0.1.0] - 2026-10-29
 
