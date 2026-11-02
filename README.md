@@ -1,5 +1,7 @@
 # LiftOff
 
+<img src="docs/logo.png" alt="" width="128" align="right">
+
 [![Build](https://github.com/MiracleForest/LiftOff/actions/workflows/build.yml/badge.svg)](https://github.com/MiracleForest/LiftOff/actions/workflows/build.yml)
 [![License](https://img.shields.io/github/license/MiracleForest/LiftOff)](COPYING.LESSER)
 
