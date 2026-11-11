@@ -22,6 +22,7 @@
 #include "mc/world/actor/item/ItemActor.h"
 #include "mc/world/actor/player/Inventory.h"
 #include "mc/world/actor/player/Player.h"
+#include "mc/world/item/HandSlot.h"
 #include "mc/world/item/ItemStack.h"
 #include "mc/world/level/BlockPos.h"
 #include "mc/world/level/BlockSource.h"
@@ -429,7 +430,13 @@ LO_REGISTER_SELFTEST("entitypickup.interact", [](Context& ctx) -> ll::coro::Coro
     cow = ll::service::getLevel()->fetchEntity(cid, false);
     ctx.require(cow != nullptr, "the cow is still there");
     pin(*cow, feet);
+#if LO_LL_VERSION >= 2660
+    auto offered = [&] {
+        return static_cast<bool>(*cow->getInteraction(p, cow->getPosition(), HandSlot::Mainhand).mCallback);
+    };
+#else
     auto offered = [&] { return static_cast<bool>(*cow->getInteraction(p, cow->getPosition()).mCallback); };
+#endif
     carry::setKeyPressed(p, false);
     ctx.check(!offered(), "no interaction offered without the carry key");
     carry::setKeyPressed(p, true);

@@ -63,11 +63,15 @@ Bedrock::Result<void> readJson(ReadOnlyBinaryStream& s, Json& out) {
 } // namespace
 
 // Packet classes need external linkage (their type name is their id).
+// Optional: since LeviLamina 26.60 a peer that does not handle a packet that is not optional is
+// refused at login. LiftOff works with vanilla clients and on servers without it, so none of its
+// packets is required (26.51 has no such check and ignores the member).
 #define LO_JSON_PACKET(Name)                                                                                           \
     class Name : public ll::network::PacketBase<Name> {                                                                \
     public:                                                                                                            \
-        Json payload = Json::object();                                                                                 \
-        Name()       = default;                                                                                        \
+        static constexpr bool Optional{true};                                                                          \
+        Json                  payload = Json::object();                                                                \
+        Name()                        = default;                                                                       \
         explicit Name(Json j) : payload(std::move(j)) {}                                                               \
         void                  write(BinaryStream& s) const override { writeJson(s, payload); }                         \
         Bedrock::Result<void> read(ReadOnlyBinaryStream& s) override { return readJson(s, payload); }                  \
@@ -80,6 +84,13 @@ LO_JSON_PACKET(CarrySyncPacket)
 LO_JSON_PACKET(StartRidingPacket)
 LO_JSON_PACKET(StartRidingOtherPacket)
 #undef LO_JSON_PACKET
+
+// Since LeviLamina 26.60 a packet handler is also told which side received the packet.
+#if LO_LL_VERSION >= 2660
+#define LO_PACKET_SIDE ll::network::PacketSide,
+#else
+#define LO_PACKET_SIDE
+#endif
 
 // ---- server side -------------------------------------------------------------------------------
 
@@ -181,14 +192,22 @@ ServerPlayer* senderOf(NetworkIdentifier const& id, NetEventCallback& callback, 
 
 class HelloHandler : public ll::network::PacketHandlerBase<HelloHandler, HelloPacket> {
 public:
-    void handlePacket(NetworkIdentifier const& id, NetEventCallback& callback, HelloPacket const& packet) const {
+    void handlePacket(
+        NetworkIdentifier const&          id,
+        NetEventCallback&                 callback,
+        LO_PACKET_SIDE HelloPacket const& packet
+    ) const {
         if (auto* p = senderOf(id, callback, packet)) dispatchFromClient(*p, "HelloPacket", packet.payload);
     }
 };
 
 class KeyPressedHandler : public ll::network::PacketHandlerBase<KeyPressedHandler, KeyPressedPacket> {
 public:
-    void handlePacket(NetworkIdentifier const& id, NetEventCallback& callback, KeyPressedPacket const& packet) const {
+    void handlePacket(
+        NetworkIdentifier const&               id,
+        NetEventCallback&                      callback,
+        LO_PACKET_SIDE KeyPressedPacket const& packet
+    ) const {
         if (auto* p = senderOf(id, callback, packet)) dispatchFromClient(*p, "KeyPressedPacket", packet.payload);
     }
 };
@@ -353,7 +372,7 @@ void safely(char const* what, F&& fn) {
 
 class WelcomeHandler : public ll::network::PacketHandlerBase<WelcomeHandler, WelcomePacket> {
 public:
-    void handlePacket(NetworkIdentifier const&, NetEventCallback&, WelcomePacket const& packet) const {
+    void handlePacket(NetworkIdentifier const&, NetEventCallback&, LO_PACKET_SIDE WelcomePacket const& packet) const {
         safely("WelcomePacket", [&] {
             auto& s = client::carry::state();
             s.settingsRetries = 0; // the server read our latest hello
@@ -367,7 +386,7 @@ public:
 
 class CarrySyncHandler : public ll::network::PacketHandlerBase<CarrySyncHandler, CarrySyncPacket> {
 public:
-    void handlePacket(NetworkIdentifier const&, NetEventCallback&, CarrySyncPacket const& packet) const {
+    void handlePacket(NetworkIdentifier const&, NetEventCallback&, LO_PACKET_SIDE CarrySyncPacket const& packet) const {
         safely("CarrySyncPacket", [&] {
             auto& s       = client::carry::state();
             auto  carrier = packet.payload.value("carrier", std::int64_t{0});
@@ -384,7 +403,8 @@ public:
 
 class StartRidingHandler : public ll::network::PacketHandlerBase<StartRidingHandler, StartRidingPacket> {
 public:
-    void handlePacket(NetworkIdentifier const&, NetEventCallback&, StartRidingPacket const& packet) const {
+    void
+    handlePacket(NetworkIdentifier const&, NetEventCallback&, LO_PACKET_SIDE StartRidingPacket const& packet) const {
         safely("StartRidingPacket", [&] {
             client::carry::fire(
                 client::carry::state().ridingListeners,
@@ -398,7 +418,11 @@ public:
 
 class StartRidingOtherHandler : public ll::network::PacketHandlerBase<StartRidingOtherHandler, StartRidingOtherPacket> {
 public:
-    void handlePacket(NetworkIdentifier const&, NetEventCallback&, StartRidingOtherPacket const& packet) const {
+    void handlePacket(
+        NetworkIdentifier const&,
+        NetEventCallback&,
+        LO_PACKET_SIDE StartRidingOtherPacket const& packet
+    ) const {
         safely("StartRidingOtherPacket", [&] {
             client::carry::fire(
                 client::carry::state().ridingOtherListeners,

@@ -23,9 +23,11 @@
 #include "ll/api/service/Bedrock.h"
 
 #include "mc/deps/shared_types/legacy/ContainerType.h"
+#include "mc/network/IncomingPacketFilterResult.h"
 #include "mc/network/MinecraftPacketIds.h"
 #include "mc/network/MinecraftPackets.h"
 #include "mc/network/NetEventCallback.h"
+#include "mc/network/NetworkIdentifierWithSubId.h"
 #include "mc/network/ServerNetworkHandler.h"
 #include "mc/network/packet/ActorPickRequestPacket.h"
 #include "mc/network/packet/BlockPickRequestPacket.h"
@@ -181,6 +183,9 @@ LL_TYPE_INSTANCE_HOOK(
     return origin(item);
 }
 
+#if LO_LL_VERSION < 2660
+// 26.60 no longer exports Inventory::getFirstEmptySlot, so there it cannot be hooked; add and canAdd,
+// which every insertion goes through, still are.
 LL_TYPE_INSTANCE_HOOK(
     InventoryFirstEmptySlotHook,
     ll::memory::HookPriority::Normal,
@@ -191,6 +196,7 @@ LL_TYPE_INSTANCE_HOOK(
     LockedSlotReservation reserve(*this);
     return origin();
 }
+#endif
 
 LL_TYPE_INSTANCE_HOOK(
     MobEquipmentHook,
@@ -222,6 +228,25 @@ LL_TYPE_INSTANCE_HOOK(
     origin(source, packet);
 }
 
+#if LO_LL_VERSION >= 2660
+// 26.60 no longer exports the ActorPickRequestPacket handler; drop the packet before it is handled.
+LL_TYPE_INSTANCE_HOOK(
+    ActorPickHook,
+    ll::memory::HookPriority::Normal,
+    ServerNetworkHandler,
+    &ServerNetworkHandler::$allowIncomingPacketId,
+    IncomingPacketFilterResult,
+    NetworkIdentifierWithSubId const& sender,
+    MinecraftPacketIds                packetId,
+    uint64                            packetSize
+) {
+    if (packetId == MinecraftPacketIds::ActorPickRequest
+        && refusePick(thisFor<NetEventCallback>()->_getServerPlayer(sender.id, sender.subClientId))) {
+        return IncomingPacketFilterResult::RejectedSilently;
+    }
+    return origin(sender, packetId, packetSize);
+}
+#else
 LL_TYPE_INSTANCE_HOOK(
     ActorPickHook,
     ll::memory::HookPriority::Normal,
@@ -234,6 +259,7 @@ LL_TYPE_INSTANCE_HOOK(
     if (refusePick(senderOf(thisFor<NetEventCallback>(), source, packet))) return;
     origin(source, packet);
 }
+#endif
 
 /// The own inventory screen (InteractPacket OpenInventory) is not opened while carrying; a close is
 /// sent in case the client already shows it.
@@ -281,7 +307,9 @@ using Hooks = ll::memory::HookRegistrar<
     UseItemHook,
     InventoryAddHook,
     InventoryCanAddHook,
+#if LO_LL_VERSION < 2660
     InventoryFirstEmptySlotHook,
+#endif
     MobEquipmentHook,
     BlockPickHook,
     ActorPickHook,

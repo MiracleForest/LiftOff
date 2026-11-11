@@ -156,12 +156,20 @@ Script const* findScript(std::string_view id) {
 }
 
 Script const* matchBlock(Block const& block, std::string_view blockEntitySnbt) {
-    auto const& type = block.getBlockType();
+#if LO_LL_VERSION >= 2660
+    // 26.60 dropped these BlockType getters; the block's direct data holds the same values.
+    float const hardness   = block.mDirectData->mDestroySpeed;
+    float const resistance = block.mDirectData->mExplosionResistance;
+#else
+    auto const& type       = block.getBlockType();
+    float const hardness   = type.getDestroySpeed();
+    float const resistance = type.getExplosionResistance();
+#endif
     for (auto const& s : loaded()) {
         if (!s.isBlock) continue;
         if (s.name && !s.name->matches(carry::blockCandidate(block))) continue;
-        if (!cs::matchesBound(s.hardness, type.getDestroySpeed())) continue;
-        if (!cs::matchesBound(s.resistance, type.getExplosionResistance())) continue;
+        if (!cs::matchesBound(s.hardness, hardness)) continue;
+        if (!cs::matchesBound(s.resistance, resistance)) continue;
         if (s.nbt && !snbtMatches(*s.nbt, blockEntitySnbt, true)) continue;
         return &s;
     }

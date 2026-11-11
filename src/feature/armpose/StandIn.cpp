@@ -162,8 +162,16 @@ std::shared_ptr<Packet>
 entityAddPacket(std::string_view snbt, std::uint64_t id, StandIn& out, float fixedScale = 0.0f) {
     std::shared_ptr<AddActorPacket> pkt;
     bool                            ok = withTempActor(snbt, nullptr, [&](Actor& actor) {
-        auto                  box = boxOf(actor);
+        auto box = boxOf(actor);
+#if LO_LL_VERSION >= 2660
+        // 26.60 no longer exports AddActorPacketPayload(Actor&); take the payload from the packet
+        // the actor makes of itself (a virtual call), which is built from that same payload.
+        std::unique_ptr<Packet> made = actor.tryCreateAddActorPacket();
+        if (!made || made->getId() != MinecraftPacketIds::AddActor) return;
+        auto& payload = static_cast<AddActorPacket&>(*made);
+#else
         AddActorPacketPayload payload(actor);
+#endif
         pkt                                    = make<AddActorPacket>(MinecraftPacketIds::AddActor);
         pkt->mEntityId->rawID                  = static_cast<std::int64_t>(id);
         pkt->mRuntimeId->rawID                 = id;

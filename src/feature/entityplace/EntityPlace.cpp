@@ -22,6 +22,7 @@
 #include "mc/deps/ecs/gamerefs_entity/OwnerStorageEntity.h"
 #include "mc/deps/nbt/ListTag.h"
 #include "mc/entity/components_json_legacy/MountTamingComponent.h"
+#include "mc/legacy/ActorUniqueID.h"
 #include "mc/platform/UUID.h"
 #include "mc/world/actor/Actor.h"
 #include "mc/world/actor/ActorFactory.h"
@@ -89,9 +90,18 @@ OwnerPtr<EntityContext> loadDetached(BlockSource& region, Vec3 const& pos, std::
 }
 
 /// Step 6: a horse at the top becomes tamed (Java `setTamed(true)`: no owner).
-void tameHorse(Actor& top) {
+void tameHorse(Actor& top, [[maybe_unused]] Player& carrier) {
     if (top.getTypeName() != "minecraft:horse" || top.isTame()) return;
-    if (auto taming = top.getEntityContext().tryGetComponent<MountTamingComponent>()) taming->becomeTame(top, false);
+    auto taming = top.getEntityContext().tryGetComponent<MountTamingComponent>();
+    if (!taming) return;
+#if LO_LL_VERSION >= 2660
+    // 26.60 no longer exports MountTamingComponent::becomeTame; tameToPlayer runs it and then makes
+    // the player the owner, which is undone (Java `setTamed(true)` leaves the horse without owner).
+    taming->tameToPlayer(top, carrier, false);
+    top.setOwner(ActorUniqueID::INVALID_ID());
+#else
+    taming->becomeTame(top, false);
+#endif
 }
 } // namespace
 
@@ -161,7 +171,7 @@ StackResult tryStack(Player& carrier, Actor& clicked) {
         return StackResult::TooBig; // the detached entity is discarded
     }
     // 6. Horse at the top: tamed.
-    tameHorse(*top);
+    tameHorse(*top, carrier);
 
     // 7. Spawn (or move the carried player) at the clicked entity.
     if (heldPlayer) {

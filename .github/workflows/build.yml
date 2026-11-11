@@ -11,7 +11,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # One job per supported LeviLamina line and side. The lip variant has the line's name
+        # (26_60, 26_51); locks/<variant>.lock pins the packages of the line.
         target_type: [server, client]
+        levilamina: [26.60.6, 26.51.7]
+        include:
+          - levilamina: 26.60.6
+            variant: "26_60"
+            line: "26.60"
+          - levilamina: 26.51.7
+            variant: "26_51"
+            line: "26.51"
+    name: build (${{ matrix.target_type }}, LeviLamina ${{ matrix.levilamina }})
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
@@ -24,9 +35,9 @@ jobs:
         with:
           path: |
             ~/AppData/Local/.xmake
-          key: xmake-${{ matrix.target_type }}-${{ hashFiles('xmake.lua', 'xmake-requires.lock') }}
+          key: xmake-${{ matrix.target_type }}-${{ matrix.variant }}-${{ hashFiles('xmake.lua', 'locks/*.lock') }}
           restore-keys: |
-            xmake-${{ matrix.target_type }}-
+            xmake-${{ matrix.target_type }}-${{ matrix.variant }}-
 
       # The action's release lookup fails intermittently on the runners ("GitHub release for
       # LLVM 22 was not found"); retry once before failing the job.
@@ -49,7 +60,7 @@ jobs:
 
       - name: Build
         shell: pwsh
-        run: pwsh tools/build.ps1 -Target ${{ matrix.target_type }}
+        run: pwsh tools/build.ps1 -Target ${{ matrix.target_type }} -LeviLamina ${{ matrix.levilamina }}
 
       - name: Dump xmake package install logs
         if: failure()
@@ -59,13 +70,13 @@ jobs:
             ForEach-Object { Write-Host "::group::$($_.FullName)"; Get-Content $_.FullName -Tail 400; Write-Host '::endgroup::' }
 
       - name: Unit tests
-        if: matrix.target_type == 'server'
+        if: matrix.target_type == 'server' && matrix.variant == '26_60'
         run: |
           xmake build -y lo-tests
           xmake run lo-tests
 
       - uses: actions/upload-artifact@v7
         with:
-          name: ${{ github.event.repository.name }}-${{ github.sha }}-${{ matrix.target_type }}-windows-x64
+          name: ${{ github.event.repository.name }}-${{ github.sha }}-${{ matrix.target_type }}-win-x64-ll${{ matrix.line }}
           path: |
             bin/${{ matrix.target_type }}/LiftOff/

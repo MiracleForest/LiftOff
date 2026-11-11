@@ -285,6 +285,15 @@ LL_TYPE_INSTANCE_HOOK(
 /// `SimulatedPlayer::simulateInteract` calls directly (it skips GameMode). Hooked too so every
 /// interaction path picks up; the shared `gInHook` guard keeps it from running a second attempt when
 /// it is reached from the GameMode hooks.
+#if LO_LL_VERSION >= 2660
+// 26.60 added the hand to Player::interact and Actor::getInteraction.
+#define LO_HAND_PARAM , HandSlot handSlot
+#define LO_HAND_ARG   , handSlot
+#else
+#define LO_HAND_PARAM
+#define LO_HAND_ARG
+#endif
+
 LL_TYPE_INSTANCE_HOOK(
     PlayerInteractHook,
     ll::memory::HookPriority::Normal,
@@ -292,7 +301,7 @@ LL_TYPE_INSTANCE_HOOK(
     &Player::interact,
     InteractionResult,
     Actor&      entity,
-    Vec3 const& location
+    Vec3 const& location LO_HAND_PARAM
 ) {
     if (handleInteract(*this, entity)) {
         InteractionResult done{};
@@ -301,7 +310,7 @@ LL_TYPE_INSTANCE_HOOK(
         return done;
     }
     HookScope scope;
-    return origin(entity, location);
+    return origin(entity, location LO_HAND_ARG);
 }
 
 /// The interaction offered for a possible pickup: text = RP key (touch "interact" button), the callback
@@ -313,7 +322,12 @@ Interaction carryInteraction() {
     alignas(Bedrock::StaticOptimizedString) std::byte raw[sizeof(Bedrock::StaticOptimizedString)]{};
     auto* text = std::launder(reinterpret_cast<Bedrock::StaticOptimizedString*>(raw));
     text->_set(kText, sizeof(kText) - 1, Bedrock::StaticOptimizedString::StorageType::Static);
+#if LO_LL_VERSION >= 2660
+    // 26.60 no longer exports Interaction::Success; build the same successful interaction.
+    return Interaction{*text, Interaction::ExecutionCallback{[] {}}, true};
+#else
     return Interaction::Success(*text, [] {});
+#endif
 }
 
 /// [LO] Touch controls: a mouse/keyboard client sends the interact transaction for any entity under the
@@ -330,9 +344,9 @@ LL_TYPE_INSTANCE_HOOK(
     &Actor::$getInteraction,
     Interaction,
     Player&     player,
-    Vec3 const& location
+    Vec3 const& location LO_HAND_PARAM
 ) {
-    Interaction result = origin(player, location);
+    Interaction result = origin(player, location LO_HAND_ARG);
     if (static_cast<bool>(*result.mCallback) || gInHook || !isServerPlayer(player)) return result;
     if (precheck(player, *this) != Result::PickedUp) return result;
     return carryInteraction();

@@ -11,6 +11,7 @@
 
 #ifdef LO_CLIENT
 
+#include <mutex>
 #include <string>
 
 #include "ll/api/event/EventBus.h"
@@ -45,8 +46,15 @@ constexpr char kAnimationFile[] = "animations/liftoff_carry.animation.json";
 
 /// getActorAnimationInfo creates an empty entry for unknown names: check the parsed animation.
 bool parsed(ActorAnimationGroup& group, char const* name) {
+#if LO_LL_VERSION >= 2660
+    // 26.60 no longer exports the ActorAnimationGroup functions: look the animation up directly.
+    std::lock_guard lock(*group.mActorAnimationMutex);
+    auto            it = group.mAnimations->find(HashedString(name));
+    return it != group.mAnimations->end() && it->second && it->second->mPtr.get() != nullptr;
+#else
     auto info = group.getActorAnimationInfo(HashedString(name));
     return info && info->mPtr.get() != nullptr;
+#endif
 }
 
 constexpr int kRetryTicks = 20; ///< ticks between attempts while the client is not ready
@@ -78,6 +86,7 @@ void ensureAnimations(Level& level) {
     auto& group  = *groupPtr;
     bool  before = parsed(group, ap::kNoneAnimation);
     bool  after  = before;
+#if LO_LL_VERSION < 2660 // 26.60 no longer exports ActorAnimationGroup::loadActorAnimation
     if (!before) {
         std::string text;
         if (ci->getResourcePackManager().load(ResourceLocation(Core::PathView(kAnimationFile)), text)) {
@@ -94,6 +103,7 @@ void ensureAnimations(Level& level) {
             after = parsed(group, ap::kNoneAnimation);
         }
     }
+#endif
     if (after) {
         st.level = &level;
         log().info("armpose: arm animations ready on the client{}", before ? "" : " (loaded by LiftOff)");

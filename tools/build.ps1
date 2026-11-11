@@ -3,13 +3,19 @@
 #   pwsh tools/build.ps1                    # both platforms, release
 #   pwsh tools/build.ps1 -Target server     # one platform
 #   pwsh tools/build.ps1 -Tests             # also build and run the unit tests (lo-tests)
+#   pwsh tools/build.ps1 -LeviLamina 26.51.7  # another supported LeviLamina line (default: the newest)
+#
+# The packages of each LeviLamina line are pinned by locks/<variant>.lock (26.60.x -> 26_60), which
+# is copied over xmake-requires.lock (generated, not tracked) before configuring.
 #
 # Each platform has its own build dir (build/<target>); outputs land in
 #   bin/<target>/LiftOff/  (dll, pdb, manifest.json, lang/, behavior_packs/, resource_packs/)
-# Copy that folder to `plugins/` (BDS) or `mods/` (LeviLauncher client).
+# Copy that folder to `mods/` (LeviLamina 26.60 server, LeviLauncher client) or `plugins/`
+# (LeviLamina 26.51 server).
 param(
     [ValidateSet('server', 'client', 'all')][string]$Target = 'all',
     [ValidateSet('release', 'debug')][string]$Mode = 'release',
+    [string]$LeviLamina = '26.60.6',
     [switch]$Tests
 )
 $ErrorActionPreference = 'Stop'
@@ -39,10 +45,18 @@ try {
         if ($pf -and (Test-Path (Join-Path $pf 'Microsoft Visual Studio\18'))) { $vsArgs = @('--vs=2026'); break }
     }
 
+    if ($LeviLamina -notmatch '^(\d+)\.(\d+)\.\d+$') { throw "-LeviLamina must be major.minor.patch, got $LeviLamina" }
+    $lock = Join-Path $root "locks/$($Matches[1])_$($Matches[2]).lock"
+    if (Test-Path $lock) {
+        Copy-Item $lock (Join-Path $root 'xmake-requires.lock') -Force
+    } else {
+        Write-Warning "no lock file $lock; xmake resolves the packages and writes xmake-requires.lock"
+    }
+
     $targets = if ($Target -eq 'all') { @('server', 'client') } else { @($Target) }
     foreach ($t in $targets) {
-        Write-Host "==> configuring $t ($Mode)"
-        xmake f -P "$root" -a x64 -m $Mode -p windows --target_type=$t -o "build/$t" @vsArgs -y
+        Write-Host "==> configuring $t ($Mode, LeviLamina $LeviLamina)"
+        xmake f -P "$root" -a x64 -m $Mode -p windows --target_type=$t --levilamina=$LeviLamina -o "build/$t" @vsArgs -y
         if ($LASTEXITCODE) { throw "xmake config failed for $t" }
         Write-Host "==> building $t"
         xmake build -P "$root" -y LiftOff

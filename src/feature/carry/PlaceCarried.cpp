@@ -79,7 +79,16 @@ PlaceResult placeBlock(Player& player, BlockSource& region, BlockPos const& orig
 bool isObstructed(BlockSource& region, BlockPos const& pos, Block const& block) {
     AABB shape = block.getBlockType().getCollisionShape(block, region, pos, nullptr);
     if (shape.max.x <= shape.min.x || shape.max.y <= shape.min.y || shape.max.z <= shape.min.z) return false;
+#if LO_LL_VERSION >= 2660
+    // 26.60 no longer exports BlockSource::isUnobstructedByEntities; ask the same question: is a
+    // live entity that blocks building inside the shape?
+    for (Actor* actor : region.fetchEntities(nullptr, shape, true, false)) {
+        if (!actor->mRemoved && actor->mBlocksBuilding) return true;
+    }
+    return false;
+#else
     return !region.isUnobstructedByEntities(shape, nullptr);
+#endif
 }
 
 bool canPlaceBlockAt(BlockSource& region, BlockPos const& pos, Block const& block) {
