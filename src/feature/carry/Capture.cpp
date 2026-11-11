@@ -112,7 +112,18 @@ bool removeCarriedBlock(BlockSource& region, BlockPos const& pos) {
     auto before = itemsAround(region, pos);
     if (auto* chest = asChest(region.getBlockEntity(pos)); chest && chest->mLargeChestPaired) {
         auto* other = chest->mLargeChestPaired;
+#if LO_LL_VERSION >= 2660
+        // 26.60 no longer exports ChestBlockActor::unpair; undo the pairing on both halves the way it
+        // does, so that each half is a 27-slot chest again.
+        for (ChestBlockActor* half : {chest, other}) {
+            if (!half) continue;
+            half->mLargeChestPaired = nullptr;
+            half->mPairLead         = false;
+            half->mPairingChanged   = true;
+        }
+#else
         chest->unpair(region);
+#endif
         if (other) other->refresh(region);
     }
     if (auto container = region.tryGetContainer(pos)) container->removeAllItems();

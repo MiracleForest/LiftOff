@@ -60,6 +60,9 @@
 #include "mc/world/actor/SynchedActorDataEntityWrapper.h"
 #include "mc/world/actor/provider/ActorMovement.h"
 #include "mc/world/actor/provider/PlayerMovement.h"
+#if LO_LL_VERSION >= 2660
+#include "mc/deps/vanilla_components/PlayerBobComponent.h"
+#endif
 #include "mc/world/item/ItemStack.h"
 #include "mc/world/level/ActorGarbageCollector.h"
 #include "mc/world/level/block/Block.h"
@@ -331,7 +334,15 @@ void applyLook(Actor& actor, CompoundTag const& tag) {
         items.push_back(DataItem::create(id(ActorDataIDs::Color2Index), static_cast<schar>(*v)));
     }
     auto& data  = actor.mEntityData;
-    auto  flags = data->getInt64(static_cast<ushort>(ActorDataIDs::Reserved0));
+#if LO_LL_VERSION >= 2660
+    // 26.60 no longer exports SynchedActorDataEntityWrapper::getInt64: read the flags one by one.
+    std::int64_t flags = 0;
+    for (int i = 0; i < 64; ++i) {
+        if (actor.getStatusFlag(static_cast<ActorFlags>(i))) flags |= std::int64_t{1} << i;
+    }
+#else
+    auto flags = data->getInt64(static_cast<ushort>(ActorDataIDs::Reserved0));
+#endif
     auto  flag  = [&](char const* key, ActorFlags f) {
         auto v = intOf(tag, key);
         if (!v) return;
@@ -440,8 +451,10 @@ Actor* standInActor(LocalPlayer& player, std::string const& snbt) {
 }
 
 /// The stand-in while we draw it, and the world matrix it gets (FirstPersonGlobalAnimsHook).
+#if LO_LL_VERSION < 2660
 thread_local Actor*    tActor = nullptr;
 thread_local glm::mat4 tMatrix{1.f};
+#endif
 
 void resetCache() {
     auto& c = cache();
@@ -487,6 +500,13 @@ void rebuild(CarryData const& data) {
 
 /// Draws the stand-in with the view-space transform `view`.
 bool drawEntity(BaseActorRenderContext& ctx, LocalPlayer& player, glm::mat4 const& view) {
+#if LO_LL_VERSION >= 2660
+    // 26.60 no longer exports ActorRenderData::applyGlobalAnims, through which the stand-in gets its
+    // world matrix (FirstPersonGlobalAnimsHook). Without it the stand-in would be drawn where the actor
+    // renderer puts it, around the camera, so it is not drawn at all.
+    (void)ctx, (void)player, (void)view;
+    return false;
+#else
     Actor* actor = standInActor(player, cache().visual.entity);
     if (!actor) return false;
     // Here view * world is the identity: the stack top turns view space into this pass's world space.
@@ -512,6 +532,7 @@ bool drawEntity(BaseActorRenderContext& ctx, LocalPlayer& player, glm::mat4 cons
     }
     tActor = nullptr;
     return true;
+#endif
 }
 
 /// Draws the local player's carry instead of the hand. False: not carrying a block or an entity (the
@@ -536,7 +557,13 @@ bool renderCarried(ItemInHandRenderer& self, BaseActorRenderContext& ctx, ItemCo
     glm::mat4 base{1.f};
     if (auto* client = currentClient(); client && client->getOptions().getBobView()) {
         auto& ent = player->getEntityContext();
+#if LO_LL_VERSION >= 2660
+        // 26.60 no longer exports PlayerMovement::getBob / getBobPrev; read the component they read.
+        auto  bobs = ent.tryGetComponent<PlayerBobComponent>();
+        float bob  = bobs ? std::lerp(bobs->mBobPrev, bobs->mBob, alpha) : 0.f;
+#else
         float bob = std::lerp(PlayerMovement::getBobPrev(ent), PlayerMovement::getBob(ent), alpha);
+#endif
         base      = viewBobTransform(ActorMovement::getPredictedWalkDist(ent, alpha), bob);
     }
 
@@ -611,6 +638,7 @@ LL_TYPE_INSTANCE_HOOK(
     if (!handled) origin(ctx, prevProj, flags);
 }
 
+#if LO_LL_VERSION < 2660 // see drawEntity
 /// The actor renderer computes the world matrix of an actor itself; the stand-in gets ours.
 LL_TYPE_INSTANCE_HOOK(
     FirstPersonGlobalAnimsHook,
@@ -624,6 +652,7 @@ LL_TYPE_INSTANCE_HOOK(
     origin(worldMatrix, ctx);
     if (tActor && this->mActor == tActor) *worldMatrix._m = tMatrix;
 }
+#endif
 
 /// Records the size of entities the server removes (a pickup removes the carried one): display actors
 /// do not get it from their definition.
@@ -653,7 +682,9 @@ class FirstPersonModule {
 public:
     void install() {
         FirstPersonRenderHook::hook();
+#if LO_LL_VERSION < 2660
         FirstPersonGlobalAnimsHook::hook();
+#endif
         FirstPersonRemoveActorHook::hook();
         mTick = ll::event::EventBus::getInstance().emplaceListener<ll::event::ClientLevelTickEvent>(
             [](ll::event::ClientLevelTickEvent& ev) {
@@ -673,7 +704,9 @@ public:
     }
     void uninstall() {
         FirstPersonRenderHook::unhook();
+#if LO_LL_VERSION < 2660
         FirstPersonGlobalAnimsHook::unhook();
+#endif
         FirstPersonRemoveActorHook::unhook();
         if (mExit) ll::event::EventBus::getInstance().removeListener(mExit);
         if (mTick) ll::event::EventBus::getInstance().removeListener(mTick);

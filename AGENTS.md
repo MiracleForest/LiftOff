@@ -1,9 +1,18 @@
 # AGENTS.md
 
 LiftOff is a Bedrock port of the *behaviour* of the Java mod **Carry On 2.11.2** (Tschipp),
-written as a LeviLamina native mod. It targets MC **1.26.51** / LeviLamina **26.51.7**, builds with
-xmake + clang-cl on Windows x64, and runs on **both** the dedicated server (BDS) and the client
-(local worlds through LeviLauncher). One code base, two builds (`--target_type=server|client`).
+written as a LeviLamina native mod. It builds with xmake + clang-cl on Windows x64, and runs on
+**both** the dedicated server (BDS) and the client (local worlds through LeviLauncher). One code
+base, two builds (`--target_type=server|client`) per supported LeviLamina line (`--levilamina`):
+
+| Line | Minecraft | lip variant | Built against | Lock file |
+| ---- | --------- | ----------- | ------------- | --------- |
+| 26.60.x | 1.26.60 | `26_60`, and the default (`""`, `client`) | `--levilamina=26.60.6` (the default) | `locks/26_60.lock` |
+| 26.51.x | 1.26.51 | `26_51` | `--levilamina=26.51.7` | `locks/26_51.lock` |
+
+The build defines `LO_LL_VERSION` (`2651`, `2660`). Guard an SDK difference with
+`#if LO_LL_VERSION >= 2660 ... #else ... #endif`, keep the guard as small as possible, and never drop
+the older path; prefer one unguarded path when the same API works on both lines.
 
 The behaviour reference is `docs/SPEC.md`. Write it (blocks, items, mechanics, every screen, config,
 commands, strings) before the first feature unit, and read it before working on a unit.
@@ -122,6 +131,7 @@ In a fresh pwsh refresh PATH first (the build script does this and adds LLVM if 
 ```powershell
 pwsh tools/build.ps1 -Target all -Tests     # bin/server/LiftOff + bin/client/LiftOff + gtest
 pwsh tools/build.ps1 -Target server -Tests  # one platform + unit tests
+pwsh tools/build.ps1 -Target all -LeviLamina 26.51.7  # the older line
 xmake build -P . -y lo-tests; xmake run -P . lo-tests
 pwsh -NoProfile -File tools/e2e/server/run.ps1 -Scenario smoke       # BDS (4 slots, waits for a free one)
 pwsh -NoProfile -File tools/e2e/client/run.ps1 -Scenario smoke       # headless client via Be.D.D.
@@ -129,7 +139,8 @@ pwsh -NoProfile -File tools/e2e/client/run.ps1 -Scenario smoke       # headless 
 
 - `git config --global core.longpaths true` is required (long LeviLamina header paths).
 - `clang-cl` must be on PATH (`C:\Program Files\LLVM\bin`).
-- `xmake-requires.lock` is committed; it holds entries for both target types.
+- `xmake-requires.lock` is generated, not tracked: `tools/build.ps1 -LeviLamina <version>` copies
+  `locks/<variant>.lock` of that line over it. Raw `xmake f` needs the same copy and `--levilamina=<version>`.
 - In game: `/carryon selftest ["glob"]` (op or server console). Quote globs: `carryon selftest "<unit>.*"`.
   Output lines: `SELFTEST PASS <name>`, `SELFTEST FAIL <name>: <reason>`, `SELFTEST DONE pass=<N> fail=<M>`.
 - Log contract: `LiftOff enabled` on enable; `LiftOff world ready` when a world is available.
@@ -138,13 +149,14 @@ pwsh -NoProfile -File tools/e2e/client/run.ps1 -Scenario smoke       # headless 
   waits for them. Headless input (Be.D.D.) is the default: the game runs in the
   background and never takes the real mouse/keyboard.
 
-Deploying by hand: copy `bin/server/LiftOff` to `<BDS>/plugins/`, or `bin/client/LiftOff` to
-`%APPDATA%\levilauncher.exe\versions\1.26.51.01\mods\`.
+Deploying by hand: copy `bin/server/LiftOff` to `<BDS>/mods/` (LeviLamina 26.60) or `<BDS>/plugins/`
+(LeviLamina 26.51), or `bin/client/LiftOff` to `%APPDATA%\levilauncher.exe\versions\<version>\mods\`.
+The e2e harnesses (`tools/e2e/`) run Minecraft 1.26.51 / LeviLamina 26.51.7: test them with the 26.51 build.
 
 ## Bedrock / LeviLamina rules (learned the hard way)
 
-- Headers: `%LOCALAPPDATA%\.xmake\packages\l\levilamina\26.51.7\<hash>\include\{ll,mc}` (one hash per
-  target type). Check them before guessing a name or signature.
+- Headers: `%LOCALAPPDATA%\.xmake\packages\l\levilamina\<version>\<hash>\include\{ll,mc}` (one hash per
+  target type, one version per line). Diff the trees of two lines before assuming an API is the same on both. Check them before guessing a name or signature.
 - Callable: `MCAPI`, `MCFOLD`, `MCTAPI`, unmarked `virtual`. **Never** `MCNAPI`. `ll::TypedStorage`
   members are fields (`.get()`, `*`, `->`). Packets without an MCAPI constructor are created with
   `MinecraftPackets::createPacket(MinecraftPacketIds::X)` + `static_cast`; send with `pkt.sendTo(player)`.

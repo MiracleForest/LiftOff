@@ -63,6 +63,13 @@ bool isBedrockOnlyBlockActor(std::string_view blockId) {
     return false;
 }
 
-bool isUnbreakable(Block const& block) { return block.getBlockType().getDestroySpeed() < 0.0f; }
+bool isUnbreakable(Block const& block) {
+#if LO_LL_VERSION >= 2660
+    // 26.60 dropped BlockType::getDestroySpeed(); the block's direct data holds the same value.
+    return block.mDirectData->mDestroySpeed < 0.0f;
+#else
+    return block.getBlockType().getDestroySpeed() < 0.0f;
+#endif
+}
 
 } // namespace lo::feature::carry

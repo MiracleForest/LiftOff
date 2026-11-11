@@ -39,11 +39,31 @@ You need Windows x64, [xmake](https://xmake.io), Visual Studio Build Tools with 
 
 ```powershell
 git config --global core.longpaths true
-pwsh tools/build.ps1 -Target all -Tests     # bin/server/LiftOff/ and bin/client/LiftOff/, plus unit tests
-pwsh tools/build.ps1 -Target client         # one platform only
+pwsh tools/build.ps1 -Target all -Tests            # bin/server/LiftOff/ and bin/client/LiftOff/, plus unit tests
+pwsh tools/build.ps1 -Target client                # one platform only
+pwsh tools/build.ps1 -Target all -LeviLamina 26.51.7  # another LeviLamina line
 ```
 
-One code base builds both the dedicated-server mod and the client mod (`--target_type=server|client`). The mod version comes from the latest `v*` git tag.
+One code base builds both the dedicated-server mod and the client mod (`--target_type=server|client`). The mod version is the `version` in [manifest.json](manifest.json) (the same as in [lip.toml](lip.toml)); the behavior and resource packs get the same version as `[major, minor, patch]`. Pack manifests cannot hold a prerelease suffix, so all prereleases of a version and the version itself (`0.2.0-beta.1`, `0.2.0-beta.2`, `0.2.0`) ship packs with the same version. Clients that cached the packs of one of them from a server may keep using them after the server moves to another; if a prerelease changes the packs, players may need to clear their cached server packs.
+
+LiftOff is compiled against one LeviLamina line at a time, chosen with `--levilamina` (`-LeviLamina` of the build script). Each supported line has a lip variant of the same name and a lock file in `locks/`, which pins the packages of that line; the build script copies it to `xmake-requires.lock` (which is generated, and not tracked) before configuring:
+
+| Line | Variant | Lock file | Configure with |
+| --- | --- | --- | --- |
+| LeviLamina 26.60.x (Minecraft 1.26.60) | `26_60` | `locks/26_60.lock` | `--levilamina=26.60.6` (the default) |
+| LeviLamina 26.51.x (Minecraft 1.26.51) | `26_51` | `locks/26_51.lock` | `--levilamina=26.51.7` |
+
+The build defines `LO_LL_VERSION` as the line it is building for (`2651`, `2660`). Where a LeviLamina API differs between lines, guard both paths with it rather than dropping the older one, and keep the guard as small as possible:
+
+```cpp
+#if LO_LL_VERSION >= 2660
+    // 26.60 and later
+#else
+    // 26.51
+#endif
+```
+
+To add a line, add its row above: a `locks/<variant>.lock` (build once with the new `-LeviLamina` and copy the generated `xmake-requires.lock`), a variant in `lip.toml`, and a matrix entry in `.github/workflows/build.yml` and `.github/workflows/release.yml`.
 
 ### Tests
 
@@ -63,12 +83,12 @@ One code base builds both the dedicated-server mod and the client mod (`--target
 
 ## Releasing (maintainers)
 
-1. In [CHANGELOG.md](CHANGELOG.md), move the *Unreleased* entries under a new `## [x.y.z] - YYYY-MM-DD` section and update the links at the bottom. Set `version` in [tooth.json](tooth.json) to `x.y.z`.
+1. In [CHANGELOG.md](CHANGELOG.md), move the *Unreleased* entries under a new `## [x.y.z] - YYYY-MM-DD` section and update the links at the bottom. Set `version` in [lip.toml](lip.toml) and in [manifest.json](manifest.json) (what the mod reports in game) to `x.y.z`.
 2. Merge that into `main`. Then run every server and client e2e scenario against `main`.
 3. Tag the merge commit `vx.y.z` and push the tag. The *Release* workflow:
-   - builds both platforms and runs the unit tests;
-   - checks that the mod manifest and `tooth.json` carry the tag's version;
-   - publishes `liftoff-server-windows-x64.zip` and `liftoff-client-windows-x64.zip`, with that version's CHANGELOG section as the release notes.
+   - builds both platforms for every supported LeviLamina line and runs the unit tests;
+   - checks that the mod manifest and `lip.toml` carry the tag's version;
+   - publishes one zip per platform and line, `liftoff-<server|client>-win-x64-ll<line>.zip` (packed the way lip's `mcmod` asset wants it: `manifest.json` at the root), with that version's CHANGELOG section as the release notes. A version with a `-` in it, such as `0.2.0-beta.1`, is published as a prerelease.
 
 ## License
 

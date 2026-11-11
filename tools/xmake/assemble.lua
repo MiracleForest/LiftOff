@@ -11,14 +11,18 @@
 --   assets/pack/rp/blocks.d/*.json            -> RP blocks.json (per-block "sound" / "textures" entries)
 -- Empty merges write nothing (an empty Lua table would be saved as a JSON array).
 -- Everything else under assets/pack/{bp,rp} is copied as is (directories ending in ".d" are skipped).
--- "${version}" in pack manifests is replaced by the mod version as a JSON array [major, minor, patch].
+-- "${version}" in pack manifests is replaced by the mod version (manifest.json) as a JSON array
+-- [major, minor, patch]; a prerelease suffix is dropped there.
 
 import("core.base.json")
 
-local function mod_version()
-    local tag = try { function () return os.iorun("git describe --tags --abbrev=0 --always") end }
-    local major, minor, patch = (tag or ""):match("v(%d+)%.(%d+)%.(%d+)")
-    return tonumber(major) or 0, tonumber(minor) or 0, tonumber(patch) or 0
+-- The mod version is the "version" in manifest.json (the same as in lip.toml). Pack manifests only
+-- hold [major, minor, patch], so a prerelease suffix ("-beta.1") is dropped there.
+local function mod_version(projectdir)
+    local manifest = json.loadfile(path.join(projectdir, "manifest.json"))
+    local major, minor, patch = tostring(manifest.version or ""):match("^(%d+)%.(%d+)%.(%d+)")
+    if not major then raise("manifest.json has no major.minor.patch version") end
+    return tonumber(major), tonumber(minor), tonumber(patch)
 end
 
 local function merge_json_fragments(dir, what)
@@ -140,7 +144,7 @@ function main(target, target_type)
     os.cp(targetfile, path.join(outdir, path.filename(targetfile)))
     local pdb = path.join(path.directory(targetfile), path.basename(targetfile) .. ".pdb")
     if os.isfile(pdb) then os.cp(pdb, path.join(outdir, path.basename(targetfile) .. ".pdb")) end
-    local major, minor, patch = mod_version()
+    local major, minor, patch = mod_version(projectdir)
     local manifest = io.readfile(path.join(projectdir, "manifest.json"))
     local vars = {
         modName = "LiftOff",

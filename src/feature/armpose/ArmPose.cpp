@@ -13,6 +13,7 @@
 #include "ll/api/service/Bedrock.h"
 
 #include "mc/network/Packet.h"
+#include "mc/network/packet/AddPlayerPacketPayload.h"
 #include "mc/world/actor/Actor.h"
 #include "mc/world/actor/player/Player.h"
 #include "mc/world/level/Level.h"
@@ -325,6 +326,22 @@ void tick() {
 
 // ---- hook: the carrier is (re)announced to a client --------------------------------------------
 
+#if LO_LL_VERSION >= 2660
+// 26.60 no longer exports Player::tryCreateAddActorPacket; the AddPlayer payload it builds for the
+// carrier still is.
+LL_TYPE_INSTANCE_HOOK(
+    ArmPoseAddPlayerHook,
+    ll::memory::HookPriority::Normal,
+    AddPlayerPacketPayload,
+    &AddPlayerPacketPayload::$ctor,
+    void*,
+    Player& player
+) {
+    auto self = origin(player);
+    if (state().installed) state().announced.insert(idOf(player));
+    return self;
+}
+#else
 LL_TYPE_INSTANCE_HOOK(
     ArmPoseAddPlayerHook,
     ll::memory::HookPriority::Normal,
@@ -336,6 +353,7 @@ LL_TYPE_INSTANCE_HOOK(
     if (state().installed) state().announced.insert(idOf(*this));
     return pkt;
 }
+#endif
 
 // ---- test seams ---------------------------------------------------------------------------------
 

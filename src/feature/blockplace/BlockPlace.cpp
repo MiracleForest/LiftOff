@@ -42,6 +42,26 @@ namespace carry = lo::feature::carry;
 namespace {
 constexpr int kUpdateAll = 3;
 
+/// Tells the six neighbours of `pos` that the block at `pos` changed.
+void updateNeighborsAt(BlockSource& region, BlockPos const& pos) {
+#if LO_LL_VERSION >= 2660
+    // 26.60 added a NeighborChangeHistory to BlockSource::updateNeighborsAt that cannot be created
+    // from outside; notify each neighbour the way that call does.
+    for (BlockPos const n : {
+             BlockPos{pos.x - 1, pos.y,     pos.z    },
+             BlockPos{pos.x + 1, pos.y,     pos.z    },
+             BlockPos{pos.x,     pos.y - 1, pos.z    },
+             BlockPos{pos.x,     pos.y + 1, pos.z    },
+             BlockPos{pos.x,     pos.y,     pos.z - 1},
+             BlockPos{pos.x,     pos.y,     pos.z + 1}
+    }) {
+        region.getBlock(n).neighborChanged(region, n, pos);
+    }
+#else
+    region.updateNeighborsAt(pos);
+#endif
+}
+
 /// Bedrock states of Java `Direction` / `Axis` properties (SPEC §3.6).
 constexpr std::array<std::string_view, 12> kDirectionStates{
     "facing_direction",
@@ -269,7 +289,7 @@ PlaceResult tryPlace(Player& player, BlockPos const& clicked, int face) {
     if (!source && isWater(region.getExtraBlock(target))) {
         if (auto const* air = game::blockWith("minecraft:air")) region.setExtraBlock(target, *air, kUpdateAll);
     }
-    region.updateNeighborsAt(BlockPos{target.x, target.y - 1, target.z});
+    updateNeighborsAt(region, BlockPos{target.x, target.y - 1, target.z});
 
     // 9. Clear, sound, swing, Slowness.
     std::string id = state.getTypeName();

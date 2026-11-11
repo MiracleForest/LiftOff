@@ -113,9 +113,11 @@ State& state() {
 
 /// True while this thread draws a carried object (the display actor goes through the hooked dispatcher).
 thread_local bool tDrawing = false;
+#if LO_LL_VERSION < 2660
 /// The display actor being drawn and the world matrix it must get (see `GlobalAnimsHook`).
 thread_local Actor*    tEntityActor = nullptr;
 thread_local glm::mat4 tEntityMatrix{1.f};
+#endif
 
 // ---- helpers -----------------------------------------------------------------------------------
 
@@ -137,7 +139,7 @@ bool isChestId(std::string const& id) {
         || id.find("copper_chest") != std::string::npos;
 }
 
-bool isMob(Actor const& a) {
+[[maybe_unused]] bool isMob(Actor const& a) { // unused on 26.60 (see drawCarried)
     return (static_cast<int>(a.getEntityTypeId()) & static_cast<int>(ActorType::Mob)) == static_cast<int>(ActorType::Mob);
 }
 
@@ -339,6 +341,13 @@ void drawCarried(BaseActorRenderContext& ctx, Actor& carrier, Vec3 const& camera
     bool            hasScript = !e.data.activeScript.empty();
 
     if (Actor* actor = displayActorOf(e)) {
+#if LO_LL_VERSION >= 2660
+        // 26.60 no longer exports ActorRenderData::applyGlobalAnims, through which the display actor
+        // gets Carry On's world matrix (GlobalAnimsHook). Without it the actor renderer would put it
+        // where it likes, so it is not drawn.
+        (void)actor;
+        return;
+#else
         EntityParams params{
             .height    = e.height,
             .width     = e.width,
@@ -375,6 +384,7 @@ void drawCarried(BaseActorRenderContext& ctx, Actor& carrier, Vec3 const& camera
         auto c = m.apply(0.f, e.height / 2.f, 0.f);
         recordDraw(id, CarryVisual::Kind::Entity, true, {c[0] + cameraTarget.x, c[1] + cameraTarget.y, c[2] + cameraTarget.z});
         return;
+#endif
     }
     if (!e.item) return;
 
@@ -428,6 +438,7 @@ void guarded(F&& fn) {
 }
 } // namespace
 
+#if LO_LL_VERSION < 2660 // see drawCarried
 // The data-driven renderer finishes an actor's world matrix here; our display actor gets Carry On's.
 LL_TYPE_INSTANCE_HOOK(
     GlobalAnimsHook,
@@ -441,7 +452,38 @@ LL_TYPE_INSTANCE_HOOK(
     origin(worldMatrix, ctx);
     // Our display actor is drawn with Carry On's transform instead of the matrix the renderer set up.
     if (tEntityActor && unwrap(this->mActor) == tEntityActor) unwrap(worldMatrix._m) = tEntityMatrix;}
+#endif
 
+#if LO_LL_VERSION >= 2660
+// 26.60 no longer exports the humanoid renderer's render; every actor, players among them, is drawn
+// through this dispatcher call, with the same position and rotation.
+LL_TYPE_INSTANCE_HOOK(
+    HumanoidRenderHook,
+    ll::memory::HookPriority::Normal,
+    ActorRenderDispatcher,
+    &ActorRenderDispatcher::render,
+    void,
+    BaseActorRenderContext& ctx,
+    Actor&                  entity,
+    Vec3 const&             cameraTargetPos,
+    Vec3 const&             pos,
+    Vec2 const&             rot,
+    bool                    ignoreLighting
+) {
+    origin(ctx, entity, cameraTargetPos, pos, rot, ignoreLighting);
+    if (tDrawing || !entity.isPlayer()) return;
+    guarded([&] {
+        drawCarried(
+            ctx,
+            entity,
+            cameraTargetPos,
+            Vec3{pos.x - cameraTargetPos.x, pos.y - cameraTargetPos.y, pos.z - cameraTargetPos.z},
+            true,
+            rot
+        );
+    });
+}
+#else
 LL_TYPE_INSTANCE_HOOK(
     HumanoidRenderHook,
     ll::memory::HookPriority::Normal,
@@ -463,6 +505,7 @@ LL_TYPE_INSTANCE_HOOK(
         drawCarried(ctx, *actor, camera, Vec3{pos.x - camera.x, pos.y - camera.y, pos.z - camera.z}, true, unwrap(rd.rotation));
     });
 }
+#endif
 
 // ---- selftest API ----------------------------------------------------------------------------------
 
@@ -521,12 +564,16 @@ public:
             });
         }
         HumanoidRenderHook::hook();
+#if LO_LL_VERSION < 2660
         GlobalAnimsHook::hook();
+#endif
     }
 
     void uninstall() {
         HumanoidRenderHook::unhook();
+#if LO_LL_VERSION < 2660
         GlobalAnimsHook::unhook();
+#endif
         auto& bus = ll::event::EventBus::getInstance();
         for (auto& l : mListeners) bus.removeListener(l);
         mListeners.clear();

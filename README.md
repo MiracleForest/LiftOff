@@ -32,21 +32,33 @@ of the carried block or mob (a carried chest shows no block), but no first-perso
 
 ## Install
 
-You need Minecraft Bedrock Edition **1.26.51** for Windows (x64) with LeviLamina **26.51.x** (on a client, installed through [LeviLauncher](https://github.com/LiteLDev/LeviLauncher)).
+You need Minecraft Bedrock Edition for Windows (x64) with LeviLamina (on a client, installed through [LeviLauncher](https://github.com/LiteLDev/LeviLauncher)). A LiftOff release is built against each LeviLamina line it supports, for the dedicated server and for the client, and you pick the one that matches your game:
 
-With [lip](https://github.com/LiteLDev/lip):
+| Minecraft | LeviLamina | Variant | Server download | Client download |
+| --- | --- | --- | --- | --- |
+| 1.26.60 | 26.60.x | `26_60`, and the default | `liftoff-server-win-x64-ll26.60.zip` | `liftoff-client-win-x64-ll26.60.zip` |
+| 1.26.51 | 26.51.x | `26_51` | `liftoff-server-win-x64-ll26.51.zip` | `liftoff-client-win-x64-ll26.51.zip` |
+
+On a client, install LiftOff from the **LeviMC Mods** page of LeviLauncher; it offers the variants above, and the default is the newest line.
+
+With [lip](https://github.com/LiteLDev/lip) 0.40.0 or later, on a dedicated server or a client (lip picks the build for the side of the folder you install into):
 
 ```sh
-lip install github.com/MiracleForest/LiftOff         # dedicated server
-lip install github.com/MiracleForest/LiftOff#client  # client
+lip install github.com/MiracleForest/LiftOff#26_60
+lip install github.com/MiracleForest/LiftOff#26_51   # to stay on Minecraft 1.26.51
 ```
 
-Or download the zip from the [latest release](https://github.com/MiracleForest/LiftOff/releases/latest) and extract it next to `LeviLamina/`:
+Each variant is a package of its own to lip: to switch, uninstall the one you have first (your configuration is kept).
 
-| Where | Zip | Folder |
-| --- | --- | --- |
-| Dedicated server | `liftoff-server-windows-x64.zip` | `plugins/LiftOff/` |
-| Client (LeviLauncher) | `liftoff-client-windows-x64.zip` | `mods/LiftOff/` |
+`lip install github.com/MiracleForest/LiftOff` (and `#client`, the variant earlier releases were installed as on a client) is the newest line.
+
+Or download the zip for your side and line from the [latest release](https://github.com/MiracleForest/LiftOff/releases/latest) and extract it into a `LiftOff` folder, next to `LeviLamina/`, so that `LiftOff/manifest.json` exists:
+
+| Where | Folder |
+| --- | --- |
+| Dedicated server, LeviLamina 26.60 | `mods/LiftOff/` |
+| Dedicated server, LeviLamina 26.51 | `plugins/LiftOff/` |
+| Client (LeviLauncher) | `mods/LiftOff/` |
 
 ## Commands
 
@@ -63,7 +75,7 @@ Or download the zip from the [latest release](https://github.com/MiracleForest/L
 
 ## Configuration
 
-Settings live in `config/*.json` inside the mod folder (`plugins/LiftOff/` or `mods/LiftOff/`). Each file is created with defaults on first start; `/carryon reload` applies changes. On a server, a client with the mod applies changes to its own `carryon_client.json` by itself within about a second.
+Settings live in `config/*.json` inside the mod folder (`mods/LiftOff/`, or `plugins/LiftOff/` on a LeviLamina 26.51 server). Each file is created with defaults on first start; `/carryon reload` applies changes. On a server, a client with the mod applies changes to its own `carryon_client.json` by itself within about a second.
 
 | File | Setting | Default | Meaning |
 | --- | --- | --- | --- |

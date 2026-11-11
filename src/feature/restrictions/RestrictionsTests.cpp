@@ -205,7 +205,9 @@ LO_REGISTER_SELFTEST("restrictions.item_pickup", [](Context& ctx) -> ll::coro::C
     p.add(sticks);
     ctx.check(inv.getItem(0).isNull(), "added items do not go into the locked slot");
     ctx.check(!inv.getItem(1).isNull() && inv.getItem(1).getTypeName() == "minecraft:stick", "they go into the next slot");
+#if LO_LL_VERSION < 2660 // Inventory::getFirstEmptySlot cannot be hooked on 26.60 (see Restrictions.cpp)
     ctx.check(inv.getItem(0).isNull() && inv.getFirstEmptySlot() != 0, "the locked slot is not offered as empty");
+#endif
 
     // Only the locked slot free: nothing fits.
     for (int i = 1; i < inv.getContainerSize(); ++i) ctx.give(p, lo::game::makeItem("minecraft:dirt", 64), i);
