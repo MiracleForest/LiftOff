@@ -50,7 +50,7 @@ lip install github.com/MiracleForest/LiftOff#26_51   # to stay on Minecraft 1.26
 
 Each variant is a package of its own to lip: to switch, uninstall the one you have first (your configuration is kept).
 
-`lip install github.com/MiracleForest/LiftOff` (and `#client`, the variant earlier releases were installed as on a client) is the newest line.
+`lip install github.com/MiracleForest/LiftOff`, the default variant, is the newest line too.
 
 Or download the zip for your side and line from the [latest release](https://github.com/MiracleForest/LiftOff/releases/latest) and extract it into a `LiftOff` folder, next to `LeviLamina/`, so that `LiftOff/manifest.json` exists:
 

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- The `client` variant. The variants are now the default, which is the newest line, and one per LeviLamina line,
+  `26_60` and `26_51`; each holds the dedicated-server and the client build, and lip and LeviLauncher pick the one for
+  the side they install to. On a client, install `github.com/MiracleForest/LiftOff` or
+  `github.com/MiracleForest/LiftOff#26_60`. An install made as `#client` is not updated to this release: uninstall it
+  (`lip uninstall github.com/MiracleForest/LiftOff#client`) and install one of the variants above. The configuration
+  in `mods/LiftOff/config/` is kept.
+
 ## [0.2.0-beta.1] - 2026-11-11
 
 First beta of 0.2.0. Please report anything that behaves differently from 0.1.1.

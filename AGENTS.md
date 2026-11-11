@@ -7,7 +7,7 @@ base, two builds (`--target_type=server|client`) per supported LeviLamina line (
 
 | Line | Minecraft | lip variant | Built against | Lock file |
 | ---- | --------- | ----------- | ------------- | --------- |
-| 26.60.x | 1.26.60 | `26_60`, and the default (`""`, `client`) | `--levilamina=26.60.6` (the default) | `locks/26_60.lock` |
+| 26.60.x | 1.26.60 | `26_60`, and the default (`""`) | `--levilamina=26.60.6` (the default) | `locks/26_60.lock` |
 | 26.51.x | 1.26.51 | `26_51` | `--levilamina=26.51.7` | `locks/26_51.lock` |
 
 The build defines `LO_LL_VERSION` (`2651`, `2660`). Guard an SDK difference with
