@@ -50,6 +50,9 @@ used; Minecraft 1.26.51 behaves as in 0.1.1.
   animations into the game by itself. On a server they come with the server's resource pack.
 - While you carry something, another mod that looks for a free inventory slot by itself may be offered the locked
   hotbar slot. Items the game adds to your inventory still never go there.
+- Stacking a carried mob onto an untamed horse tames the horse through a different game function than on 1.26.51,
+  which may also count as the carrier taming it (statistics, achievements, taming effects). The horse is still left
+  without an owner. This has not been checked in game yet.
 
 ## [0.1.1] - 2026-11-01
 

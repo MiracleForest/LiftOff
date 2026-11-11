@@ -44,7 +44,7 @@ pwsh tools/build.ps1 -Target client                # one platform only
 pwsh tools/build.ps1 -Target all -LeviLamina 26.51.7  # another LeviLamina line
 ```
 
-One code base builds both the dedicated-server mod and the client mod (`--target_type=server|client`). The mod version is the `version` in [manifest.json](manifest.json) (the same as in [lip.toml](lip.toml)); the version of the behavior and resource packs comes from the latest `v*` git tag.
+One code base builds both the dedicated-server mod and the client mod (`--target_type=server|client`). The mod version is the `version` in [manifest.json](manifest.json) (the same as in [lip.toml](lip.toml)); the behavior and resource packs get the same version as `[major, minor, patch]`. Pack manifests cannot hold a prerelease suffix, so all prereleases of a version and the version itself (`0.2.0-beta.1`, `0.2.0-beta.2`, `0.2.0`) ship packs with the same version. Clients that cached the packs of one of them from a server may keep using them after the server moves to another; if a prerelease changes the packs, players may need to clear their cached server packs.
 
 LiftOff is compiled against one LeviLamina line at a time, chosen with `--levilamina` (`-LeviLamina` of the build script). Each supported line has a lip variant of the same name and a lock file in `locks/`, which pins the packages of that line; the build script copies it to `xmake-requires.lock` (which is generated, and not tracked) before configuring:
 
