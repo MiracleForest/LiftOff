@@ -1,0 +1,24 @@
+LiftOff
+Copyright (C) 2026 MiracleForest and LiftOff contributors
+
+LiftOff is licensed under the GNU Lesser General Public License, version 3 only
+(LGPL-3.0-only). See COPYING.LESSER and COPYING.
+
+LiftOff is a Bedrock adaptation of Carry On by Tschipp
+(https://github.com/Tschipp/CarryOn), version 2.11.2. Carry On is
+Copyright (C) 2024 Tschipp and is licensed under the GNU Lesser General Public
+License, version 3 or (at your option) any later version, per its source
+headers. Portions of LiftOff's text and behaviour logic are derived from Carry
+On and are used under LGPL-3.0.
+
+Changes from Carry On:
+- Reimplemented in C++ as a LeviLamina native mod for Minecraft Bedrock Edition
+  (dedicated server and client), in place of the Java Forge/Fabric/NeoForge mod.
+- Behaviour adapted to Bedrock blocks, entities, input, rendering and storage;
+  configuration, commands and in-game text reworked for Bedrock.
+- LiftOff ships no textures, models or sounds from Carry On. Its resource pack
+  contains only player arm-pose animations written for Bedrock and language
+  files.
+
+LiftOff is not affiliated with or endorsed by Tschipp, Carry On, Mojang Studios
+or Microsoft.

@@ -1,0 +1,12 @@
+{
+  "liftoff.category.settings": "Settings",
+  "liftoff.category.blacklist": "Blacklist",
+  "liftoff.category.whitelist": "Whitelist",
+  "liftoff.category.modeloverrides": "Model Overrides (Advanced)",
+  "liftoff.category.custompickupconditions": "Custom Pickup Conditions (Advanced)",
+  "liftoff.general.modeloverrides.modeloverrides": "Model Overrides",
+  "liftoff.general.blacklist.forbiddenentities": "Entities that the Player cannot pick up",
+  "liftoff.general.blacklist.forbiddentiles": "Blocks that the Player cannot pick up",
+  "liftoff.category.custompickupconditions.custompickupconditionsblocks": "Custom Block Pickup Conditions",
+  "liftoff.category.custompickupconditions.custompickupconditionsentities": "Custom Entity Pickup Conditions"
+}

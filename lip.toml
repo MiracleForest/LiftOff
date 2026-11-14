@@ -1,0 +1,98 @@
+format = 4
+id = "github.com/MiracleForest/LiftOff"
+version = "0.2.0-beta.1"
+
+[info]
+name = "LiftOff"
+description = "Pick up chests, blocks and mobs in Minecraft Bedrock Edition and carry them in your arms"
+tags = ["game-mechanics", "utility", "carry", "pickup"]
+logo = "https://raw.githubusercontent.com/MiracleForest/LiftOff/main/docs/logo.png"
+
+# LiftOff is compiled against one LeviLamina line at a time, so every supported line is a variant
+# named after it: 26_51 for LeviLamina 26.51.x (Minecraft 1.26.51), 26_60 for 26.60.x
+# (Minecraft 1.26.60). Variant names may only hold [a-z0-9_], hence 26_60 and not 26.60.
+# Each line has a server entry (dedicated server) and a client entry (LeviLauncher).
+#
+# The default variant is the newest supported line. There are no other variants: lip and
+# LeviLauncher pick the server or client entry by the side they install to. LeviLamina releases
+# are still tooth.json packages, whose client build is the variant "client", so the client entries
+# depend on LeviLamina#client and the server entries on plain LeviLamina.
+
+# --- 26.60 (Minecraft 1.26.60) ------------------------------------------------------------------
+
+[[variants.""]]
+side = "server"
+platform = "win-x64"
+preserve = ["mods/LiftOff/config/"]
+
+[variants."".deps]
+"github.com/LiteLDev/LeviLamina" = "26.60.*"
+
+[[variants."".assets]]
+type = "mcmod"
+urls = ["https://{{id}}/releases/download/v{{version}}/liftoff-server-win-x64-ll26.60.zip"]
+
+[[variants.""]]
+side = "client"
+platform = "win-x64"
+preserve = ["mods/LiftOff/config/"]
+
+[variants."".deps]
+"github.com/LiteLDev/LeviLamina#client" = "26.60.*"
+
+[[variants."".assets]]
+type = "mcmod"
+urls = ["https://{{id}}/releases/download/v{{version}}/liftoff-client-win-x64-ll26.60.zip"]
+
+[[variants."26_60"]]
+side = "server"
+platform = "win-x64"
+preserve = ["mods/LiftOff/config/"]
+
+[variants."26_60".deps]
+"github.com/LiteLDev/LeviLamina" = "26.60.*"
+
+[[variants."26_60".assets]]
+type = "mcmod"
+urls = ["https://{{id}}/releases/download/v{{version}}/liftoff-server-win-x64-ll26.60.zip"]
+
+[[variants."26_60"]]
+side = "client"
+platform = "win-x64"
+preserve = ["mods/LiftOff/config/"]
+
+[variants."26_60".deps]
+"github.com/LiteLDev/LeviLamina#client" = "26.60.*"
+
+[[variants."26_60".assets]]
+type = "mcmod"
+urls = ["https://{{id}}/releases/download/v{{version}}/liftoff-client-win-x64-ll26.60.zip"]
+
+# --- 26.51 (Minecraft 1.26.51) ------------------------------------------------------------------
+
+# LeviLamina 26.51 servers load mods from plugins/, not mods/, so the server build of this line is
+# placed there as before (an mcmod asset always goes to mods/).
+[[variants."26_51"]]
+side = "server"
+platform = "win-x64"
+preserve = ["plugins/LiftOff/config/"]
+
+[variants."26_51".deps]
+"github.com/LiteLDev/LeviLamina" = "26.51.*"
+
+[[variants."26_51".assets]]
+type = "zip"
+urls = ["https://{{id}}/releases/download/v{{version}}/liftoff-server-win-x64-ll26.51.zip"]
+place = [{ src = "", dest = "plugins/LiftOff/" }]
+
+[[variants."26_51"]]
+side = "client"
+platform = "win-x64"
+preserve = ["mods/LiftOff/config/"]
+
+[variants."26_51".deps]
+"github.com/LiteLDev/LeviLamina#client" = "26.51.*"
+
+[[variants."26_51".assets]]
+type = "mcmod"
+urls = ["https://{{id}}/releases/download/v{{version}}/liftoff-client-win-x64-ll26.51.zip"]

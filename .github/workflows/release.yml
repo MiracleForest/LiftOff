@@ -1,0 +1,134 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        # One job per supported LeviLamina line and side. The lip variant has the line's name
+        # (26_60, 26_51); locks/<variant>.lock pins the packages of the line.
+        target_type: [server, client]
+        levilamina: [26.60.6, 26.51.7]
+        include:
+          - levilamina: 26.60.6
+            variant: "26_60"
+            line: "26.60"
+          - levilamina: 26.51.7
+            variant: "26_51"
+            line: "26.51"
+    name: build (${{ matrix.target_type }}, LeviLamina ${{ matrix.levilamina }})
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # levibuildscript's modpacker runs git describe; the version is in manifest.json
+
+      - uses: xmake-io/github-action-setup-xmake@v1
+
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/AppData/Local/.xmake
+          key: xmake-${{ matrix.target_type }}-${{ matrix.variant }}-${{ hashFiles('xmake.lua', 'locks/*.lock') }}
+          restore-keys: |
+            xmake-${{ matrix.target_type }}-${{ matrix.variant }}-
+
+      # See build.yml: the action's release lookup fails intermittently.
+      - name: Setup LLVM
+        id: llvm
+        continue-on-error: true
+        uses: ZhongRuoyu/setup-llvm@v0
+        with:
+          llvm-version: 22
+
+      - name: Setup LLVM (retry)
+        if: steps.llvm.outcome == 'failure'
+        uses: ZhongRuoyu/setup-llvm@v0
+        with:
+          llvm-version: 22
+
+      - run: git config --global core.longpaths true
+
+      - run: xmake repo -u
+
+      - name: Build
+        shell: pwsh
+        run: pwsh tools/build.ps1 -Target ${{ matrix.target_type }} -LeviLamina ${{ matrix.levilamina }}
+
+      - name: Unit tests
+        if: matrix.target_type == 'server' && matrix.variant == '26_60'
+        run: |
+          xmake build -y lo-tests
+          xmake run lo-tests
+
+      - name: Check versions
+        shell: pwsh
+        run: |
+          $expected = "${{ github.ref_name }}".TrimStart('v')
+          $actual = (Get-Content bin/${{ matrix.target_type }}/LiftOff/manifest.json | ConvertFrom-Json).version
+          if ($actual -ne $expected) { throw "manifest version $actual does not match tag $expected" }
+          $declared = (Select-String -Path lip.toml -Pattern '^version = "(.+)"$' | Select-Object -First 1).Matches[0].Groups[1].Value
+          if ($declared -ne $expected) { throw "lip.toml version $declared does not match tag $expected" }
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $dir = "bin/${{ matrix.target_type }}/LiftOff"
+          Copy-Item COPYING, COPYING.LESSER, NOTICE, README.md -Destination $dir
+          # lip's mcmod asset wants manifest.json at the root of the ZIP, with '/' separators.
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          [System.IO.Compression.ZipFile]::CreateFromDirectory(
+            (Resolve-Path $dir).Path,
+            (Join-Path (Get-Location) "liftoff-${{ matrix.target_type }}-win-x64-ll${{ matrix.line }}.zip"),
+            [System.IO.Compression.CompressionLevel]::Optimal,
+            $false
+          )
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: zip-${{ matrix.target_type }}-${{ matrix.variant }}
+          path: liftoff-${{ matrix.target_type }}-win-x64-ll${{ matrix.line }}.zip
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          pattern: zip-*
+          merge-multiple: true
+
+      - name: Release notes
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $lines = Get-Content CHANGELOG.md
+          $start = ($lines | Select-String -Pattern "^## \[$([regex]::Escape($version))\]").LineNumber
+          if (-not $start) { throw "CHANGELOG.md has no section for $version" }
+          $rest = $lines[$start..($lines.Count - 1)]
+          $end = ($rest | Select-String -Pattern '^## \[|^\[[^\]]+\]: ' | Select-Object -First 1).LineNumber
+          $body = if ($end) { $rest[0..($end - 2)] } else { $rest }
+          ($body -join "`n").Trim() | Set-Content RELEASE_NOTES.md -Encoding utf8
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            dist/liftoff-server-win-x64-ll26.60.zip
+            dist/liftoff-client-win-x64-ll26.60.zip
+            dist/liftoff-server-win-x64-ll26.51.zip
+            dist/liftoff-client-win-x64-ll26.51.zip
+          fail_on_unmatched_files: true
+          body_path: RELEASE_NOTES.md
+          prerelease: ${{ contains(github.ref_name, '-') }}
