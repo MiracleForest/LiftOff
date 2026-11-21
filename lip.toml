@@ -1,6 +1,6 @@
 format = 4
 id = "github.com/MiracleForest/LiftOff"
-version = "0.1.0"
+version = "0.1.1"
 
 [info]
 name = "LiftOff"
@@ -14,9 +14,14 @@ logo = "https://raw.githubusercontent.com/MiracleForest/LiftOff/main/docs/logo.p
 # Each line has a server entry (dedicated server) and a client entry (LeviLauncher).
 #
 # The default variant is the newest supported line. There are no other variants: lip and
-# LeviLauncher pick the server or client entry by the side they install to. LeviLamina releases
-# are still tooth.json packages, whose client build is the variant "client", so the client entries
-# depend on LeviLamina#client and the server entries on plain LeviLamina.
+# LeviLauncher pick the server or client entry by the side they install to.
+#
+# LeviLamina 26.60.8 and later are lip.toml packages: their default variant holds both builds and
+# they have no "client" variant. Releases up to 26.60.7, and every 26.51 release, are tooth.json
+# packages whose client build is the variant "client" and whose default variant is the server
+# build. So the 26.60 client entries depend on plain LeviLamina from 26.60.8 on (an older default
+# variant would install the server build on a client), and the 26.51 client entries depend on
+# LeviLamina#client.
 
 # --- 26.60 (Minecraft 1.26.60) ------------------------------------------------------------------
 
@@ -38,7 +43,7 @@ platform = "win-x64"
 preserve = ["mods/LiftOff/config/"]
 
 [variants."".deps]
-"github.com/LiteLDev/LeviLamina#client" = "26.60.*"
+"github.com/LiteLDev/LeviLamina" = ">=26.60.8 <26.61.0"
 
 [[variants."".assets]]
 type = "mcmod"
@@ -62,7 +67,7 @@ platform = "win-x64"
 preserve = ["mods/LiftOff/config/"]
 
 [variants."26_60".deps]
-"github.com/LiteLDev/LeviLamina#client" = "26.60.*"
+"github.com/LiteLDev/LeviLamina" = ">=26.60.8 <26.61.0"
 
 [[variants."26_60".assets]]
 type = "mcmod"
